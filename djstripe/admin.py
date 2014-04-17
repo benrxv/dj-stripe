@@ -221,9 +221,9 @@ customer_has_card.short_description = "Customer Has Card"
 
 
 def customer_user(obj):
-    if hasattr(obj, 'USERNAME_FIELD'):
+    if hasattr(obj.customer.user, 'USERNAME_FIELD'):
         # Using a Django 1.5 User model
-        username = getattr(obj.customer.user, User.USERNAME_FIELD)
+        username = getattr(obj.customer.user, obj.customer.user.USERNAME_FIELD)
     else:
         # Using a pre-Django 1.5 User model
         username = obj.customer.user.username
