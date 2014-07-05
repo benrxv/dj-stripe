@@ -483,6 +483,7 @@ class Customer(StripeObject):
                 sub_obj.cancel_at_period_end = sub.cancel_at_period_end
                 sub_obj.start = convert_tstamp(sub.start)
                 sub_obj.quantity = sub.quantity
+                sub_obj.metadata = sub.plan.metadata
                 sub_obj.save()
             except CurrentSubscription.DoesNotExist:
                 sub_obj = CurrentSubscription.objects.create(
@@ -498,7 +499,8 @@ class Customer(StripeObject):
                     status=sub.status,
                     cancel_at_period_end=sub.cancel_at_period_end,
                     start=convert_tstamp(sub.start),
-                    quantity=sub.quantity
+                    quantity=sub.quantity,
+                    metadata=sub.plan.metadata
                 )
 
             if sub.trial_start and sub.trial_end:
@@ -611,6 +613,7 @@ class CurrentSubscription(TimeStampedModel):
     trial_end = models.DateTimeField(null=True, blank=True)
     trial_start = models.DateTimeField(null=True, blank=True)
     amount = models.DecimalField(decimal_places=2, max_digits=7)
+    metadata = JSONField(null=True)
 
     def plan_display(self):
         return PAYMENTS_PLANS[self.plan]["name"]
