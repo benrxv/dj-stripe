@@ -29,7 +29,8 @@ def sync_plans():
                     interval=settings.DJSTRIPE_PLANS[plan]["interval"],
                     name=settings.DJSTRIPE_PLANS[plan]["name"],
                     currency=settings.DJSTRIPE_PLANS[plan]["currency"],
-                    id=settings.DJSTRIPE_PLANS[plan].get("stripe_plan_id")
+                    id=settings.DJSTRIPE_PLANS[plan].get("stripe_plan_id"),
+                    metadata=settings.DJSTRIPE_PLANS[plan].get("metadata", {})
                 )
                 print("Plan created for {0}".format(plan))
             except Exception as e:
