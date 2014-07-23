@@ -443,7 +443,7 @@ class Customer(StripeObject):
         try:
             invoice = stripe.Invoice.create(customer=self.stripe_id)
             invoice.pay()
-            return True
+            return invoice
         except stripe.InvalidRequestError:
             return False  # There was nothing to invoice
 
