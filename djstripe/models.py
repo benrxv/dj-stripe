@@ -31,6 +31,11 @@ from .signals import webhook_processing_error
 from .settings import TRIAL_PERIOD_FOR_USER_CALLBACK
 from .settings import DEFAULT_PLAN
 
+# for dwolla
+from django_extensions.db.fields.encrypted import EncryptedCharField
+from djdwolla.auth import DWOLLA_ACCOUNT, DWOLLA_APP, DWOLLA_GATE
+from djdwolla.tasks import send_funds
+from delorean import Delorean
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 stripe.api_version = getattr(settings, "STRIPE_API_VERSION", "2012-11-07")
@@ -65,10 +70,27 @@ def convert_tstamp(response, field_name=None):
 
 class StripeObject(TimeStampedModel):
 
-    stripe_id = models.CharField(max_length=50, unique=True)
+    stripe_id = models.CharField(max_length=50, unique=True, null=True)
 
     class Meta:
         abstract = True
+
+
+class MultipayObject(StripeObject):
+
+    dwolla_id = models.CharField(max_length=50, null=True)
+
+    class Meta:
+        abstract = True
+
+    def __init__(self, *args, **kwargs):
+        self.pay_type = kwargs.get("pay_type")
+        super(MultipayObject, self).__init__(*args, **kwargs)
+
+    def pay_getattr(self, attr):
+        if self.pay_type and self.pay_type != "stripe":
+            attr = "%s_%s" % (self.pay_type, attr)
+        return getattr(self, attr)
 
 
 @python_2_unicode_compatible
@@ -318,9 +340,16 @@ class TransferChargeFee(TimeStampedModel):
 
 
 @python_2_unicode_compatible
-class Customer(StripeObject):
+class Customer(MultipayObject):
 
     user = models.OneToOneField(getattr(settings, 'AUTH_USER_MODEL', 'auth.User'), null=True)
+
+    # for dwolla
+    token = models.CharField(max_length=100, null=True, blank=True)
+    refresh_token = models.CharField(max_length=100, null=True, blank=True)
+    pin = EncryptedCharField(max_length=100, null=True, blank=True)
+
+    # for stripe
     card_fingerprint = models.CharField(max_length=200, blank=True)
     card_last_4 = models.CharField(max_length=4, blank=True)
     card_kind = models.CharField(max_length=50, blank=True)
@@ -501,7 +530,7 @@ class Customer(StripeObject):
             except CurrentSubscription.DoesNotExist:
                 sub_obj = CurrentSubscription.objects.create(
                     customer=self,
-                    plan= plan or plan_from_stripe_id(sub.plan.id),
+                    plan=plan or plan_from_stripe_id(sub.plan.id),
                     current_period_start=convert_tstamp(
                         sub.current_period_start
                     ),
@@ -594,6 +623,19 @@ class Customer(StripeObject):
         data = stripe.Charge.retrieve(charge_id)
         return Charge.sync_from_stripe_data(data)
 
+    # For Dwolla
+
+    @classmethod
+    def create_dwolla(cls, user):
+        cus = Customer.objects.create(user=user)
+        return cus
+
+    def refresh_token(self):
+        resp = DWOLLA_APP.refresh_auth(self.token)
+        self.token = resp['refresh_token']
+        self.save(update_fields=['token'])
+        return True
+
 
 class CurrentSubscription(TimeStampedModel):
 
@@ -603,11 +645,7 @@ class CurrentSubscription(TimeStampedModel):
     STATUS_CANCELLED = "canceled"
     STATUS_UNPAID = "unpaid"
 
-    customer = models.OneToOneField(
-        Customer,
-        related_name="current_subscription",
-        null=True
-    )
+    customer = models.ForeignKey(Customer, related_name="current_subscriptions", null=True)
     plan = models.CharField(max_length=100)
     quantity = models.IntegerField()
     start = models.DateTimeField()
@@ -652,6 +690,36 @@ class CurrentSubscription(TimeStampedModel):
             return False
 
         return True
+
+    # for Dwolla
+
+    def charge_subscription(self):
+        if DWOLLA_ACCOUNT['refresh_token']:
+            self.customer.refresh_token()
+        cus = self.customer
+        send_funds.delay(cus.token, DWOLLA_ACCOUNT['user_id'],
+                         float(self.amount), cus.pin,
+                         "Devote.IO monthly subscription")
+
+    @classmethod
+    def get_or_create_dwolla(cls, customer, amount=0):
+        try:
+            return CurrentSubscription.objects.get(customer=customer), False
+        except CurrentSubscription.DoesNotExist:
+            return cls.create(customer, amount=amount), True
+
+    @classmethod
+    def create_dwolla(cls, customer, amount=0):
+        end = Delorean().next_month().truncate("month").datetime
+        current_sub = CurrentSubscription.objects.create(customer=customer, quantity=1,
+                                                         start=timezone.now(), status="active",
+                                                         current_period_end=end, amount=amount,
+                                                         current_period_start=timezone.now())
+        return current_sub
+
+    def update(self, amount):
+        self.amount = amount
+        self.save(update_fields=['amount'])
 
 
 class Invoice(TimeStampedModel):
