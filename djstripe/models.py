@@ -30,6 +30,7 @@ from .signals import subscription_made, cancelled, card_changed
 from .signals import webhook_processing_error
 from .settings import TRIAL_PERIOD_FOR_USER_CALLBACK
 from .settings import DEFAULT_PLAN
+from djdwolla.models import Customer as DwollaCustomer
 
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -92,16 +93,33 @@ class EventProcessingException(TimeStampedModel):
         return u"<%s, pk=%s, Event=%s>" % (self.message, self.pk, self.event)
 
 
+class UserEventManager(models.Manager):
+
+    def for_user(self, user):
+        return super(UserEventManager, self).get_queryset().filter(user=user)
+
+
 @python_2_unicode_compatible
 class Event(StripeObject):
 
     kind = models.CharField(max_length=250)
     livemode = models.BooleanField(default=False)
     customer = models.ForeignKey("Customer", null=True)
+    dwolla_customer = models.ForeignKey(DwollaCustomer, null=True)
     webhook_message = JSONField()
     validated_message = JSONField(null=True)
     valid = models.NullBooleanField(null=True)
     processed = models.BooleanField(default=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
+
+    objects = UserEventManager()
+
+    @property
+    def portal(self):
+        if self.kind.startswith("dwolla."):
+            return "dwolla"
+        else:
+            return "stripe"
 
     @property
     def message(self):

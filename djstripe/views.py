@@ -121,6 +121,9 @@ class WebHook(CsrfExemptMixin, View):
                 livemode=data["livemode"],
                 webhook_message=data
             )
+            if event.customer:
+                event.user = event.customer.user
+                event.save(update_fields=['user'])
             event.validate()
             event.process()
         return HttpResponse()
