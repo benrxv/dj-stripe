@@ -748,7 +748,7 @@ class Invoice(TimeStampedModel):
             invoice.period_end = period_end
 
             if item.get("plan"):
-                plan = plan_from_stripe_id(item["plan"]["id"])
+                plan = plan_from_stripe_id(item["plan"]["id"]) or str(item["plan"]["id"])
             else:
                 plan = ""
 
