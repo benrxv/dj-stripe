@@ -118,6 +118,8 @@ class Event(StripeObject):
     def portal(self):
         if self.kind.startswith("dwolla."):
             return "dwolla"
+        elif self.kind.startswith("devote."):
+            return "devote"
         else:
             return "stripe"
 
