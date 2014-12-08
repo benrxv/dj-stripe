@@ -7,14 +7,14 @@ from django.db import models, migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('djstripe', '0004_auto__chg_field_customer_user__add_field_currentsubscription_metadata'),
+        ('djstripe', '0001_initial'),
     ]
 
     operations = [
         migrations.AddField(
             model_name='event',
             name='amount',
-            field=models.DecimalField(max_digits=8, decimal_places=2, null=True),
+            field=models.DecimalField(null=True, max_digits=8, decimal_places=2),
             preserve_default=True,
         ),
     ]
