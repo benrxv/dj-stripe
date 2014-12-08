@@ -31,6 +31,7 @@ from .signals import webhook_processing_error
 from .settings import TRIAL_PERIOD_FOR_USER_CALLBACK
 from .settings import DEFAULT_PLAN
 from djdwolla.models import Customer as DwollaCustomer
+from delorean import Delorean
 
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -111,6 +112,7 @@ class Event(StripeObject):
     valid = models.NullBooleanField(null=True)
     processed = models.BooleanField(default=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
+    amount = models.DecimalField(max_digits=8, decimal_places=2, null=True)
 
     objects = UserEventManager()
 
@@ -675,6 +677,26 @@ class CurrentSubscription(TimeStampedModel):
             return False
 
         return True
+
+    @classmethod
+    def get_or_create(cls, customer, amount=0):
+        try:
+            return CurrentSubscription.objects.get(customer=customer), False
+        except CurrentSubscription.DoesNotExist:
+            return cls.create(customer, amount=amount), True
+
+    @classmethod
+    def create(cls, customer, amount=0):
+        end = Delorean().next_month().truncate("month").datetime
+        current_sub = CurrentSubscription.objects.create(customer=customer, quantity=1,
+                                                         start=timezone.now(), status="active",
+                                                         current_period_end=end, amount=amount,
+                                                         current_period_start=timezone.now())
+        return current_sub
+
+    def update(self, amount):
+        self.amount = amount
+        self.save(update_fields=['amount'])
 
 
 class Invoice(TimeStampedModel):

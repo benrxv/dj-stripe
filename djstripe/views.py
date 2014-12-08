@@ -119,11 +119,8 @@ class WebHook(CsrfExemptMixin, View):
                 stripe_id=data["id"],
                 kind=data["type"],
                 livemode=data["livemode"],
-                webhook_message=data
+                webhook_message=data,
             )
-            if event.customer:
-                event.user = event.customer.user
-                event.save(update_fields=['user'])
             event.validate()
             event.process()
         return HttpResponse()
