@@ -108,8 +108,10 @@ class WebHook(CsrfExemptMixin, View):
             # Handles Python 2
             body = request.body
         data = json.loads(body)
-        if Event.objects.filter(stripe_id=data["id"]).exists():
+        existing_events = Event.objects.filter(stripe_id=data["id"])
+        if existing_events:
             EventProcessingException.objects.create(
+                event=existing_events[0],
                 data=data,
                 message="Duplicate event record",
                 traceback=""

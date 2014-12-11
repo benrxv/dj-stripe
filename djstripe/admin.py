@@ -149,6 +149,10 @@ admin.site.register(
     ],
 )
 
+
+class EventProcessingExceptionInline(admin.TabularInline):
+    model = EventProcessingException
+
 admin.site.register(
     Event,
     raw_id_fields=["customer"],
@@ -174,6 +178,7 @@ admin.site.register(
         "customer__user__email",
         "validated_message"
     ] + user_search_fields,
+    inlines = [EventProcessingExceptionInline]
 )
 
 
