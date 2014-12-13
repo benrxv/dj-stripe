@@ -77,7 +77,7 @@ class StripeObject(TimeStampedModel):
 class EventProcessingException(TimeStampedModel):
 
     event = models.ForeignKey("Event", null=True)
-    data = models.TextField()
+    data = JSONField()
     message = models.CharField(max_length=500)
     traceback = models.TextField()
 
