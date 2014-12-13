@@ -16,6 +16,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='eventprocessingexception',
             name='data',
-            field=jsonfield.fields.JSONField(),
+            field=jsonfield.fields.JSONField(null=True),
         ),
     ]
