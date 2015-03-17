@@ -32,6 +32,7 @@ from .settings import TRIAL_PERIOD_FOR_USER_CALLBACK
 from .settings import DEFAULT_PLAN
 from djdwolla.models import Customer as DwollaCustomer
 from delorean import Delorean
+from djbraintree.models import Customer as BraintreeCustomer
 
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -107,6 +108,7 @@ class Event(StripeObject):
     livemode = models.BooleanField(default=False)
     customer = models.ForeignKey("Customer", null=True)
     dwolla_customer = models.ForeignKey(DwollaCustomer, null=True)
+    bt_customer = models.ForeignKey(BraintreeCustomer, null=True)
     webhook_message = JSONField()
     validated_message = JSONField(null=True)
     valid = models.NullBooleanField(null=True)
@@ -122,6 +124,8 @@ class Event(StripeObject):
             return "dwolla"
         elif self.kind.startswith("devote."):
             return "devote"
+        elif self.kind.startswith("braintree."):
+            return "braintree"
         else:
             return "stripe"
 
