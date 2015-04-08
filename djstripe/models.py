@@ -109,6 +109,7 @@ class Event(StripeObject):
     customer = models.ForeignKey("Customer", null=True)
     dwolla_customer = models.ForeignKey(DwollaCustomer, null=True)
     bt_customer = models.ForeignKey(BraintreeCustomer, null=True)
+    paypal_customer = models.ForeignKey("billing.PaypalCustomer", null=True)
     webhook_message = JSONField()
     validated_message = JSONField(null=True)
     valid = models.NullBooleanField(null=True)
@@ -126,6 +127,8 @@ class Event(StripeObject):
             return "devote"
         elif self.kind.startswith("braintree."):
             return "braintree"
+        elif self.kind.startswith("paypal."):
+            return "paypal"
         else:
             return "stripe"
 
