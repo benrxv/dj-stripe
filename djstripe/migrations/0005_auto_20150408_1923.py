@@ -2,8 +2,6 @@
 from __future__ import unicode_literals
 
 from django.db import models, migrations
-import __builtin__
-import jsonfield.fields
 
 
 class Migration(migrations.Migration):
@@ -19,10 +17,5 @@ class Migration(migrations.Migration):
             name='paypal_customer',
             field=models.ForeignKey(to='billing.PaypalCustomer', null=True),
             preserve_default=True,
-        ),
-        migrations.AlterField(
-            model_name='eventprocessingexception',
-            name='data',
-            field=jsonfield.fields.JSONField(default=__builtin__.dict),
         ),
     ]
